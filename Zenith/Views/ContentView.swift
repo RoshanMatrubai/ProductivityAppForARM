@@ -4,29 +4,35 @@ struct ContentView: View {
     @State private var theme = ThemeManager()
 
     var body: some View {
-        VStack(spacing: 24) {
-            Text("Zenith")
-                .font(.system(size: 48, weight: .black, design: .default))
-                .foregroundStyle(theme.foreground)
-            Text("Minimalist productivity for macOS")
-                .font(.system(size: 16, weight: .regular))
-                .foregroundStyle(theme.secondaryForeground)
+        VStack(spacing: 0) {
+            header
+            Divider()
+                .background(theme.foreground.opacity(0.15))
+            PomodoroView(theme: theme)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(40)
         .background(theme.background.ignoresSafeArea())
-        .overlay(alignment: .topTrailing) {
+        .animation(.easeInOut(duration: 0.2), value: theme.isDark)
+    }
+
+    private var header: some View {
+        HStack {
+            Text("ZENITH")
+                .font(.system(size: 13, weight: .black, design: .monospaced))
+                .tracking(6)
+                .foregroundStyle(theme.foreground)
+            Spacer()
             Button {
                 theme.isDark.toggle()
             } label: {
                 Image(systemName: theme.isDark ? "sun.max.fill" : "moon.fill")
-                    .font(.system(size: 20, weight: .medium))
+                    .font(.system(size: 16, weight: .medium))
                     .foregroundStyle(theme.foreground)
-                    .padding(16)
             }
             .buttonStyle(.plain)
         }
-        .animation(.easeInOut(duration: 0.2), value: theme.isDark)
+        .padding(.horizontal, 32)
+        .padding(.vertical, 16)
     }
 }
 
