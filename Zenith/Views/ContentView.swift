@@ -1,18 +1,21 @@
 import SwiftUI
 
 struct ContentView: View {
-    @State private var theme = ThemeManager()
+    // @AppStorage owns isDark. KVO on UserDefaults re-renders this view the instant
+    // isDark changes — no shared object, no observation chain to break.
+    @AppStorage("isDarkMode") private var isDark: Bool = true
+    private var theme: ThemeManager { ThemeManager(isDark: isDark) }
 
     var body: some View {
         VStack(spacing: 0) {
             header
             Divider()
                 .background(theme.foreground.opacity(0.15))
-            PomodoroView(theme: theme)
+            PomodoroView()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(theme.background.ignoresSafeArea())
-        .animation(.easeInOut(duration: 0.2), value: theme.isDark)
+        .animation(.easeInOut(duration: 0.2), value: isDark)
     }
 
     private var header: some View {
@@ -23,9 +26,9 @@ struct ContentView: View {
                 .foregroundStyle(theme.foreground)
             Spacer()
             Button {
-                theme.isDark.toggle()
+                isDark.toggle()
             } label: {
-                Image(systemName: theme.isDark ? "sun.max.fill" : "moon.fill")
+                Image(systemName: isDark ? "sun.max.fill" : "moon.fill")
                     .font(.system(size: 16, weight: .medium))
                     .foregroundStyle(theme.foreground)
             }

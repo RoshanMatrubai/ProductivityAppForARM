@@ -1,7 +1,8 @@
 import SwiftUI
 
 struct PomodoroView: View {
-    @Bindable var theme: ThemeManager
+    @AppStorage("isDarkMode") private var isDark: Bool = true
+    private var theme: ThemeManager { ThemeManager(isDark: isDark) }
     @State private var timer = TimerViewModel()
 
     var body: some View {
@@ -12,6 +13,7 @@ struct PomodoroView: View {
             controls
         }
         .padding(32)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     // MARK: - Subviews
@@ -49,9 +51,7 @@ struct PomodoroView: View {
 
     private var controls: some View {
         HStack(spacing: 24) {
-            ZenithButton(label: "RESET", theme: theme) {
-                timer.reset()
-            }
+            ZenithButton(label: "RESET", theme: theme) { timer.reset() }
 
             ZenithButton(
                 label: timer.isActive ? "PAUSE" : "START",
@@ -61,9 +61,7 @@ struct PomodoroView: View {
                 timer.isActive ? timer.pause() : timer.start()
             }
 
-            ZenithButton(label: "SKIP", theme: theme) {
-                timer.skipPhase()
-            }
+            ZenithButton(label: "SKIP", theme: theme) { timer.skipPhase() }
         }
     }
 }
@@ -99,15 +97,13 @@ private struct ZenithButton: View {
 // MARK: - Preview
 
 #Preview("Dark") {
-    PomodoroView(theme: ThemeManager())
+    PomodoroView()
         .frame(width: 400, height: 260)
         .background(Color.black)
 }
 
 #Preview("Light") {
-    let t = ThemeManager()
-    t.isDark = false
-    return PomodoroView(theme: t)
+    PomodoroView()
         .frame(width: 400, height: 260)
         .background(Color.white)
 }

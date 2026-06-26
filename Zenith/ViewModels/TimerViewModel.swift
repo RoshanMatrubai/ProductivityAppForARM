@@ -41,7 +41,6 @@ enum PomodoroPhase: String, Codable {
         return String(format: "%02d:%02d", minutes, seconds)
     }
 
-    /// Fraction of the current phase that has elapsed (0.0 at start → 1.0 at completion).
     var progress: Double {
         let elapsed = currentPhase.duration - timeLeft
         return min(max(elapsed / currentPhase.duration, 0.0), 1.0)
@@ -86,12 +85,15 @@ enum PomodoroPhase: String, Codable {
     func reset() {
         pause()
         timeLeft = currentPhase.duration
-        logger.info("Timer reset — phase: \(self.currentPhase.label), duration: \(self.currentPhase.duration)s")
+        logger.info("Timer reset — phase: \(self.currentPhase.label)")
     }
 
+    /// Manual skip — advances phase but leaves timer paused (user decides when to start).
     func skipPhase() {
         pause()
-        advance()
+        currentPhase = (currentPhase == .work) ? .shortBreak : .work
+        timeLeft = currentPhase.duration
+        logger.info("Phase skipped — now: \(self.currentPhase.label)")
     }
 
     // MARK: Private
@@ -100,15 +102,20 @@ enum PomodoroPhase: String, Codable {
         if timeLeft > 0 {
             timeLeft -= 1
         } else {
-            advance()
+            completePhase()
         }
     }
 
-    private func advance() {
-        pause()
+    /// Natural phase completion — auto-starts next phase.
+    /// Distinct from skipPhase() which leaves the timer paused.
+    private func completePhase() {
+        dispatchTimer?.cancel()
+        dispatchTimer = nil
+        isActive = false
         currentPhase = (currentPhase == .work) ? .shortBreak : .work
         timeLeft = currentPhase.duration
-        logger.info("Phase advanced — now: \(self.currentPhase.label), duration: \(self.currentPhase.duration)s")
+        logger.info("Phase completed — advancing to: \(self.currentPhase.label)")
+        start()
     }
 
     deinit {

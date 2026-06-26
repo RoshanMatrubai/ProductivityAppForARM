@@ -8,10 +8,10 @@ final class TaskItem {
     var isCompleted: Bool
     var createdAt: Date
 
-    init(title: String) {
+    init(title: String, isCompleted: Bool = false) {
         self.id = UUID()
         self.title = title
-        self.isCompleted = false
+        self.isCompleted = isCompleted
         self.createdAt = Date()
     }
 }

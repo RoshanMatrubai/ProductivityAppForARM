@@ -23,10 +23,8 @@ struct ZenithApp: App {
                 .frame(minWidth: 700, minHeight: 500)
         }
         .modelContainer(container)
-        .windowResizability(.contentSize)
         .defaultSize(width: 800, height: 580)
         .commands {
-            // Remove File > New Window — single-window app
             CommandGroup(replacing: .newItem) {}
         }
     }
