@@ -1,0 +1,31 @@
+included:
+  - Zenith
+
+excluded:
+  - Zenith.xcodeproj
+  - build
+  - DerivedData
+
+disabled_rules:
+  - trailing_whitespace
+
+opt_in_rules:
+  - empty_count
+  - force_unwrapping
+  - implicitly_unwrapped_optional
+  - prefer_self_type_over_type_of_self
+
+line_length:
+  warning: 120
+  error: 150
+
+identifier_name:
+  min_length: 2
+
+type_body_length:
+  warning: 300
+  error: 400
+
+file_length:
+  warning: 400
+  error: 600
