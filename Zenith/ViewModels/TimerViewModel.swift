@@ -58,6 +58,19 @@ enum PomodoroPhase: String, Codable {
 
     private let logger = Logger(subsystem: "com.zenith.app", category: "timer")
 
+    // MARK: Persistence keys
+
+    private static let keyTimeLeft  = "timer.timeLeft"
+    private static let keyPhase     = "timer.phase"
+    private static let keyWasActive = "timer.wasActive"
+    private static let keyLastSaved = "timer.lastSaveDate"
+
+    // MARK: Init
+
+    init() {
+        restoreState()
+    }
+
     // MARK: Public API
 
     func start() {
@@ -72,6 +85,7 @@ enum PomodoroPhase: String, Codable {
 
         dispatchTimer = source
         isActive = true
+        saveState()
         logger.info("Timer started — phase: \(self.currentPhase.label), timeLeft: \(self.timeLeft)s")
     }
 
@@ -79,12 +93,14 @@ enum PomodoroPhase: String, Codable {
         dispatchTimer?.cancel()
         dispatchTimer = nil
         isActive = false
+        saveState()
         logger.info("Timer paused — phase: \(self.currentPhase.label), timeLeft: \(self.timeLeft)s")
     }
 
     func reset() {
         pause()
         timeLeft = currentPhase.duration
+        saveState()
         logger.info("Timer reset — phase: \(self.currentPhase.label)")
     }
 
@@ -93,7 +109,18 @@ enum PomodoroPhase: String, Codable {
         pause()
         currentPhase = (currentPhase == .work) ? .shortBreak : .work
         timeLeft = currentPhase.duration
+        saveState()
         logger.info("Phase skipped — now: \(self.currentPhase.label)")
+    }
+
+    /// Persist current timer state to UserDefaults. Called every tick and on every
+    /// state transition so a SIGKILL loses at most ~1 second of timer position.
+    func saveState() {
+        let defaults = UserDefaults.standard
+        defaults.set(timeLeft,               forKey: Self.keyTimeLeft)
+        defaults.set(currentPhase.rawValue,  forKey: Self.keyPhase)
+        defaults.set(isActive,               forKey: Self.keyWasActive)
+        defaults.set(Date(),                 forKey: Self.keyLastSaved)
     }
 
     // MARK: Private
@@ -101,6 +128,7 @@ enum PomodoroPhase: String, Codable {
     private func tick() {
         if timeLeft > 0 {
             timeLeft -= 1
+            saveState()
         } else {
             completePhase()
         }
@@ -114,8 +142,33 @@ enum PomodoroPhase: String, Codable {
         isActive = false
         currentPhase = (currentPhase == .work) ? .shortBreak : .work
         timeLeft = currentPhase.duration
+        saveState()
         logger.info("Phase completed — advancing to: \(self.currentPhase.label)")
         start()
+    }
+
+    /// Restore timer position from UserDefaults. If the timer was active when the
+    /// app was killed, subtract wall-clock elapsed time so the display is accurate.
+    /// isActive is NOT restored — user restarts manually after a force-quit relaunch.
+    private func restoreState() {
+        let defaults = UserDefaults.standard
+        let savedTime = defaults.double(forKey: Self.keyTimeLeft)
+        guard savedTime > 0 else { return }
+
+        let phaseRaw  = defaults.string(forKey: Self.keyPhase) ?? PomodoroPhase.work.rawValue
+        let wasActive = defaults.bool(forKey: Self.keyWasActive)
+        let lastSaved = defaults.object(forKey: Self.keyLastSaved) as? Date
+
+        currentPhase = PomodoroPhase(rawValue: phaseRaw) ?? .work
+
+        var restored = savedTime
+        if wasActive, let lastSaved {
+            let elapsed = Date().timeIntervalSince(lastSaved)
+            restored = max(0, savedTime - elapsed)
+        }
+
+        timeLeft = restored > 0 ? restored : currentPhase.duration
+        logger.info("Timer restored — phase: \(self.currentPhase.label), timeLeft: \(self.timeLeft)s")
     }
 
     deinit {

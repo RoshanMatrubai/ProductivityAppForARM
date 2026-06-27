@@ -1,9 +1,9 @@
 import SwiftUI
 
 struct PomodoroView: View {
-    @AppStorage("isDarkMode") private var isDark: Bool = true
-    private var theme: ThemeManager { ThemeManager(isDark: isDark) }
-    @State private var timer = TimerViewModel()
+    @AppStorage("selectedTheme") private var selectedTheme: ZenithTheme = .obsidian
+    private var theme: ThemeManager { ThemeManager(theme: selectedTheme) }
+    let timer: TimerViewModel
 
     var body: some View {
         VStack(spacing: 32) {
@@ -79,6 +79,8 @@ private struct ZenithButton: View {
             Text(label)
                 .font(.system(size: 11, weight: .semibold, design: .monospaced))
                 .tracking(2)
+                .lineLimit(1)
+                .fixedSize()
                 .foregroundStyle(isPrimary ? theme.background : theme.foreground)
                 .padding(.horizontal, 20)
                 .padding(.vertical, 10)
@@ -96,14 +98,16 @@ private struct ZenithButton: View {
 
 // MARK: - Preview
 
+// # MOCK
 #Preview("Dark") {
-    PomodoroView()
+    PomodoroView(timer: TimerViewModel())
         .frame(width: 400, height: 260)
         .background(Color.black)
 }
 
+// # MOCK
 #Preview("Light") {
-    PomodoroView()
+    PomodoroView(timer: TimerViewModel())
         .frame(width: 400, height: 260)
         .background(Color.white)
 }

@@ -7,14 +7,28 @@ private let logger = Logger(subsystem: "com.zenith.app", category: "TaskListView
 struct TaskListView: View {
     @Query(sort: \TaskItem.createdAt) private var tasks: [TaskItem]
     @Environment(\.modelContext) private var modelContext
-    @AppStorage("isDarkMode") private var isDark: Bool = true
-    private var theme: ThemeManager { ThemeManager(isDark: isDark) }
+    @AppStorage("selectedTheme") private var selectedTheme: ZenithTheme = .obsidian
+    private var theme: ThemeManager { ThemeManager(theme: selectedTheme) }
 
     @State private var newTaskTitle: String = ""
     @FocusState private var isInputFocused: Bool
 
     private var remainingCount: Int {
         tasks.filter { !$0.isCompleted }.count
+    }
+
+    // Incomplete tasks sorted by dueDate asc (nil last), then createdAt. Completed sink to bottom.
+    private var sortedTasks: [TaskItem] {
+        let incomplete = tasks.filter { !$0.isCompleted }.sorted { a, b in
+            switch (a.dueDate, b.dueDate) {
+            case (.some(let da), .some(let db)): return da < db
+            case (.some, .none):                 return true
+            case (.none, .some):                 return false
+            case (.none, .none):                 return a.createdAt < b.createdAt
+            }
+        }
+        let complete = tasks.filter { $0.isCompleted }
+        return incomplete + complete
     }
 
     var body: some View {
@@ -44,7 +58,7 @@ struct TaskListView: View {
                 Spacer()
             } else {
                 List {
-                    ForEach(tasks) { task in
+                    ForEach(sortedTasks) { task in
                         TaskRowView(task: task)
                             .listRowBackground(theme.background)
                             .listRowSeparatorTint(theme.secondaryForeground.opacity(0.3))
@@ -94,7 +108,7 @@ struct TaskListView: View {
 
     private func deleteTasks(at offsets: IndexSet) {
         for index in offsets {
-            modelContext.delete(tasks[index])
+            modelContext.delete(sortedTasks[index])
         }
         do {
             try modelContext.save()
@@ -109,9 +123,12 @@ struct TaskListView: View {
     let container: ModelContainer = {
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         let c = try! ModelContainer(for: TaskItem.self, configurations: config)
-        c.mainContext.insert(TaskItem(title: "Finish project plan", isCompleted: true))
-        c.mainContext.insert(TaskItem(title: "Write a task with an extremely long title to verify that multi-line text wrapping works correctly inside the row layout"))
-        c.mainContext.insert(TaskItem(title: "Review pull request"))
+        let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: Date())!
+        let tomorrow  = Calendar.current.date(byAdding: .day, value: +1, to: Date())!
+        c.mainContext.insert(TaskItem(title: "Finish project plan", isCompleted: true, priority: .medium))
+        c.mainContext.insert(TaskItem(title: "Write a task with an extremely long title to verify that multi-line text wrapping works correctly inside the row layout", priority: .low))
+        c.mainContext.insert(TaskItem(title: "Review pull request", priority: .high, dueDate: yesterday))
+        c.mainContext.insert(TaskItem(title: "Plan sprint", priority: .medium, dueDate: tomorrow))
         return c
     }()
     TaskListView()
